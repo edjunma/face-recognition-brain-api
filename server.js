@@ -5,12 +5,12 @@ const cors = require('cors');
 const knex = require('knex');
 
 const db = knex({
-  client: 'mysql',
+  client:'pg',
   connection: {
-    host : '127.0.0.1',
-    user : 'edjunma',
-    password : '',
-    database : 'smart-brain'
+    host: '127.0.0.1',
+    user: 'edjunma',
+    password: '',
+    database: 'smart-brain'
   }
 });
 
@@ -68,50 +68,38 @@ app.post('/signin', (req, res) => {
 
 app.post('/register', (req, res) => {
   const { email, name, password } = req.body;
-  db('users')
-  .returning('*')
-    .insert({
+  db('users').insert({
       email: email,
       name: name,
       joined: new Date()
-    })
-      .then(response => {
-        res.json(response);
+    }).then(console.log)
       })
+      .catch(err => res.status(400).json('unable to register'))
 })
 
 app.get('/profile/:id', (req, res) => {
     const { id } = req.params;
-    let found = false;
-    database.users.forEach(user => {
-      if (user.id === id) {
-        found = true;
-        return res.json(user);
-      }
-    })
-    if (!found) {
-      res.status(400).json('not found');
+    db.select('*').from('users').where({id})
+      .then(user => {
+        if (user.length) {
+          res.json(user[0])
+        } else {
+          res.status(400).json('Not found')
     }
+  })
+    .catch(err => res.status(400).json('error getting user'))
 })
 
 app.put('./image', (req, res) => {
   const { id } = req.body;
-  let found = false;
-  database.users.forEach(user => {
-    if (user.id === id) {
-      found = true;
-      user.entries++;
-      return res.json(user.entries);
-    }
+  db('users').where('id', '=', id)
+  .increment('entries', 1)
+  .returning('entries')
+  .then(entries => {
+    res.json(entries[0]);
   })
-  if (!found) {
-    res.status(400).json('not found');
-  }
+  .catch(err => res.status(400).json('unable to get entries'))
 })
-
-bcrypt.hash("bacon", null, null, function(err, hash) {
-  //Store has in your password DB.
-});
 
 app.listen(3000, () => {
   console.log('app is running on port 3000');

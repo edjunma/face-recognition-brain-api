@@ -16,34 +16,6 @@ const db = knex({
 
 const app = express();
 
-const database = {
-  users: [
-    {
-      id: '123',
-      name: 'John',
-      email: 'john@gmail.com',
-      password: 'cookies',
-      entries: 0,
-      joined: new Date(),
-    },
-    {
-      id: '124',
-      name: 'Sally',
-      email: 'sally@gmail.com',
-      password: 'bananas',
-      entries: 0,
-      joined: new Date(),
-    },
-  ],
-  login: [
-    {
-      id: '987',
-      hash: '',
-      email: 'john@gmail.com'
-    },
-  ],
-};
-
 app.use(bodyParser.json());
 app.use(cors());
 
@@ -52,29 +24,48 @@ app.get('/', (req, res) => {
 })
 
 app.post('/signin', (req, res) => {
-  bcrypt.compare("bacon", 'asdasd', function(err, res) {
-    // res == true
-  });
-  bcrypt.compare("veggies", 'asdasdasd', function(err, res) {
-    // res == true
-  });
-  if (req.body.email === database.users[0].email &&
-    req.body.password === database.users[0].password) {
-  res.json(database.users[0]);
-  } else {
-    res.status(400).json('error logging in');
-  }
+  db.select('email', 'hash').from('login')
+  .where('email', '=', req.body.email)
+  .then(data => {
+    const isValid = bcrypt.compareSync(req.body.passsword, data[0].hash);
+    if (isValid) {
+      return db.select('*').from('users')
+        .where('email', '=', req.body.email)
+        .then(user => {
+          res.json(user[0])
+        })
+        .catch(err => res.status(400).json('unable to get user'))
+    } else {
+      res.status(400).json('wrong credentials')
+    }
+  })
+  .catch(err => res.status(400).json('wrong credentials'))
 })
 
 app.post('/register', (req, res) => {
   const { email, name, password } = req.body;
-  db('users').insert({
-      email: email,
-      name: name,
-      joined: new Date()
-    }).then(console.log)
+  const hash = bcrypt.hashSync(password);
+  db.transaction(trx => {
+    trx.insert({
+      hash: hash,
+      email: email
+    })
+    .into('login')
+    .returning('email')
+    .then(loginEmail => {
+      return trx('users')
+        .insert({
+        .returning('*')
+          email: loginEmail[0],
+          name: name,
+          joined: new Date()
+        })
+        .then(user => {
+          res.json(user[0]);
+        })
       })
-      .catch(err => res.status(400).json('unable to register'))
+      .then(trx.commit)
+      .catch(trx.rollback)
 })
 
 app.get('/profile/:id', (req, res) => {

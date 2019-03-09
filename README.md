@@ -1,4 +1,15 @@
 ## Face-Recognition-Brain-API-v1
+API for Face-Recognition-Brain-Webapp
+
+## Tools and Technologies used
+* NodeJS
+* ExpressJS
+* PostgreSQL
+* Heroku
+* bcrypt
+* clarifai
+
+## Run this project locally
 1. Clone repository
 2. Run `npm install`
 3. Run `npm start`
